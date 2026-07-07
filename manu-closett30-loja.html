@@ -83,9 +83,10 @@
   /* ---------- Topbar ---------- */
   .topbar{
     position:sticky; top:0; z-index:40;
-    display:flex; align-items:center; justify-content:space-between;
-    padding:16px 20px;
-    background:rgba(251,246,241,0.88);
+    display:grid; grid-template-columns:1fr auto 1fr;
+    align-items:center;
+    padding:14px 20px;
+    background:rgba(251,246,241,0.92);
     backdrop-filter:blur(10px);
     border-bottom:1px solid var(--line);
   }
@@ -95,8 +96,9 @@
       padding-right:max(20px, calc((100% - 1160px)/2));
     }
   }
-  .wordmark{ display:flex; align-items:center; }
-  .wordmark img{ height:34px; width:auto; display:block; }
+  .wordmark{ display:flex; align-items:center; grid-column:2; }
+  .wordmark img{ height:44px; width:auto; display:block; }
+  @media(min-width:640px){ .wordmark img{ height:52px; } }
   .brand-badge{
     width:30px; height:30px; opacity:0.9; flex-shrink:0;
     animation: spin 34s linear infinite;
@@ -104,6 +106,7 @@
   @keyframes spin{ from{ transform:rotate(0deg);} to{ transform:rotate(360deg);} }
   .cart-btn{
     position:relative;
+    grid-column:3; justify-self:end;
     width:42px; height:42px;
     display:flex; align-items:center; justify-content:center;
     border-radius:50%;
@@ -456,7 +459,7 @@
 <body>
 
 <div class="announce">
-  FÁBRICA PRÓPRIA <span class="dot">·</span> <b>ENVIO PARA TODO O BRASIL</b> <span class="dot">·</span> ATENDIMENTO DIRETO NO WHATSAPP
+  <b>MANÚ CLOSET</b> <span class="dot">·</span> FÁBRICA PRÓPRIA <span class="dot">·</span> ENVIO PARA TODO O BRASIL <span class="dot">·</span> ATENDIMENTO VIA WHATSAPP
 </div>
 
 <div class="topbar">
@@ -472,7 +475,7 @@
 <section class="hero">
   <div class="hero-grid">
   <div class="hero-inner">
-    <div class="eyebrow">Fábrica própria · Fortaleza, CE</div>
+    <div class="eyebrow">Manú Closet · Fábrica própria, Fortaleza-CE</div>
     <h1>Monte seu look, <em>peça por peça.</em></h1>
     <p class="lede">Peças autorais de moda feminina, direto da fábrica. Combine modelos diferentes: quanto mais peças no seu kit, menor o valor de cada uma.</p>
     <div class="hero-meta">
@@ -533,7 +536,7 @@
 
 <section class="catalog" id="catalog">
   <div class="catalog-head">
-    <div class="eyebrow">Coleção atual</div>
+    <div class="eyebrow">Manú Closet · Coleção atual</div>
     <h2>6 peças, infinitas combinações</h2>
     <p>Escolha o tamanho de cada peça antes de adicionar à sacola. Fotos reais chegam em breve, os modelos abaixo já estão disponíveis para pedido.</p>
   </div>
