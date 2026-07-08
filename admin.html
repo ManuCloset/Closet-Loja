@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manú Closet — Painel</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Work+Sans:wght@400;500;600;700&display=swap');
+
+  :root{
+    --ink:#211814;
+    --ink-soft:#6E5A52;
+    --bordeaux:#A65C52;
+    --bordeaux-dark:#8B4741;
+    --blush-soft:#F8F1EE;
+    --sand:#FFFFFF;
+    --sand-deep:#F3EDE6;
+    --gold:#C0973F;
+    --line: rgba(33,24,20,0.12);
+    --danger:#B3423A;
+    --ok:#4C7A56;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--blush-soft); color:var(--ink);
+    font-family:'Work Sans',sans-serif; -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  h1,h2,h3,.serif{ font-family:'Fraunces',serif; margin:0; }
+  button{ font-family:inherit; cursor:pointer; border:none; background:none; }
+  input,select,textarea{ font-family:inherit; }
+
+  /* ---------- Login ---------- */
+  .login-wrap{
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .login-card{
+    background:var(--sand); border-radius:20px; padding:36px 28px; width:100%; max-width:360px;
+    box-shadow:0 24px 48px -24px rgba(33,24,20,0.25);
+  }
+  .login-card h1{ font-size:22px; font-weight:600; color:var(--bordeaux); font-style:italic; }
+  .login-card p{ font-size:12.5px; color:var(--ink-soft); margin-top:6px; }
+  .field{ margin-top:18px; }
+  .field label{ font-size:11.5px; font-weight:600; color:var(--ink-soft); display:block; margin-bottom:6px; }
+  .field input, .field select, .field textarea{
+    width:100%; border:1px solid var(--line); border-radius:10px; padding:11px 13px;
+    font-size:13.5px; background:var(--sand); color:var(--ink);
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{ outline:2px solid var(--bordeaux); outline-offset:1px; }
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    background:var(--ink); color:#fff; font-weight:600; font-size:13px;
+    padding:12px 20px; border-radius:10px; transition:opacity .2s;
+  }
+  .btn:hover{ opacity:0.88; }
+  .btn.primary{ background:var(--bordeaux); }
+  .btn.danger{ background:var(--danger); }
+  .btn.ghost{ background:var(--sand-deep); color:var(--ink); }
+  .btn:disabled{ opacity:0.5; pointer-events:none; }
+  .btn-block{ width:100%; margin-top:22px; }
+  .error-msg{ font-size:12px; color:var(--danger); margin-top:10px; display:none; }
+
+  /* ---------- App shell ---------- */
+  .app{ display:none; min-height:100vh; }
+  .app.show{ display:block; }
+  .topbar{
+    background:var(--sand); border-bottom:1px solid var(--line);
+    padding:16px 20px; display:flex; align-items:center; justify-content:space-between;
+    position:sticky; top:0; z-index:5;
+  }
+  .topbar .brand{ font-family:'Fraunces',serif; font-style:italic; color:var(--bordeaux); font-size:19px; font-weight:600; }
+  .topbar .brand span{ font-family:'Work Sans',sans-serif; font-style:normal; font-size:11px; color:var(--ink-soft); display:block; font-weight:600; letter-spacing:.06em; }
+  .tabs{ display:flex; gap:6px; padding:12px 20px 0; background:var(--sand); border-bottom:1px solid var(--line); }
+  .tab-btn{
+    padding:10px 16px; font-size:12.5px; font-weight:600; color:var(--ink-soft);
+    border-bottom:2px solid transparent;
+  }
+  .tab-btn.active{ color:var(--bordeaux); border-bottom-color:var(--bordeaux); }
+  .panel{ display:none; padding:20px; max-width:960px; margin:0 auto; }
+  .panel.show{ display:block; }
+
+  .panel-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; gap:12px; flex-wrap:wrap; }
+  .panel-head h2{ font-size:20px; font-weight:600; }
+
+  /* ---------- Product cards ---------- */
+  .prod-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; }
+  .prod-card{ background:var(--sand); border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  .prod-photo{
+    aspect-ratio:4/5; background:var(--sand-deep); display:flex; align-items:center; justify-content:center;
+    position:relative; overflow:hidden;
+  }
+  .prod-photo img{ width:100%; height:100%; object-fit:cover; }
+  .prod-photo svg{ width:30%; opacity:0.3; }
+  .prod-photo .badge-inactive{
+    position:absolute; top:8px; left:8px; background:var(--danger); color:#fff;
+    font-size:9px; font-weight:700; padding:3px 8px; border-radius:99px; text-transform:uppercase;
+  }
+  .prod-body{ padding:12px; }
+  .prod-body h3{ font-size:13.5px; font-weight:600; }
+  .prod-body .cat{ font-size:11px; color:var(--ink-soft); margin-top:2px; }
+  .prod-actions{ display:flex; gap:6px; margin-top:10px; }
+  .prod-actions .btn{ padding:7px 10px; font-size:11.5px; flex:1; }
+
+  /* ---------- Modal ---------- */
+  .overlay{ position:fixed; inset:0; background:rgba(33,24,20,0.5); display:none; align-items:center; justify-content:center; z-index:20; padding:16px; }
+  .overlay.show{ display:flex; }
+  .modal{ background:var(--sand); border-radius:18px; padding:24px; width:100%; max-width:440px; max-height:88vh; overflow-y:auto; }
+  .modal h3{ font-size:17px; font-weight:600; margin-bottom:4px; }
+  .modal-foot{ display:flex; gap:10px; margin-top:20px; }
+  .photo-drop{
+    border:1.5px dashed var(--line); border-radius:12px; padding:18px; text-align:center;
+    cursor:pointer; margin-top:8px; background:var(--blush-soft);
+  }
+  .photo-drop img{ max-width:100%; max-height:140px; border-radius:8px; display:block; margin:0 auto; }
+  .photo-drop span{ font-size:11.5px; color:var(--ink-soft); display:block; margin-top:6px; }
+
+  /* ---------- Orders table ---------- */
+  .order-card{ background:var(--sand); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:12px; }
+  .order-head{ display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:6px; }
+  .order-head .cli{ font-weight:600; font-size:14px; }
+  .order-head .date{ font-size:11px; color:var(--ink-soft); }
+  .order-meta{ font-size:12px; color:var(--ink-soft); margin-top:4px; }
+  .order-items{ margin-top:10px; font-size:12.5px; border-top:1px dashed var(--line); padding-top:10px; }
+  .order-items div{ padding:2px 0; }
+  .order-total{ margin-top:10px; font-family:'Fraunces',serif; font-weight:600; font-size:15px; color:var(--bordeaux); }
+  .status-select{ margin-top:10px; font-size:11.5px; padding:6px 10px; border-radius:8px; border:1px solid var(--line); }
+
+  .empty-state{ text-align:center; padding:60px 20px; color:var(--ink-soft); font-size:13px; }
+  .loading{ text-align:center; padding:40px; color:var(--ink-soft); font-size:13px; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <h1>Manú Closet</h1>
+    <p>Painel administrativo — faça login para continuar.</p>
+    <div class="field">
+      <label>E-mail</label>
+      <input type="email" id="loginEmail" autocomplete="username">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="loginPass" autocomplete="current-password">
+    </div>
+    <button class="btn primary btn-block" id="loginBtn">Entrar</button>
+    <div class="error-msg" id="loginError"></div>
+    <div id="signupToggleWrap" style="text-align:center;margin-top:16px;">
+      <button id="showSignupBtn" style="font-size:12px;color:var(--ink-soft);text-decoration:underline;">Primeiro acesso? Criar minha conta</button>
+    </div>
+    <div id="signupBox" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);">
+      <p style="margin:0 0 4px;">Cria sua conta de administradora aqui (não depende da tela de Authentication do Supabase).</p>
+      <button class="btn ghost btn-block" id="signupBtn">Criar conta com esse e-mail e senha</button>
+      <div class="error-msg" id="signupMsg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="brand">Manú Closet<span>PAINEL ADMINISTRATIVO</span></div>
+    <button class="btn ghost" id="logoutBtn">Sair</button>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="products">Produtos</button>
+    <button class="tab-btn" data-tab="orders">Pedidos</button>
+  </div>
+
+  <!-- PRODUCTS -->
+  <div class="panel show" id="panel-products">
+    <div class="panel-head">
+      <h2>Produtos</h2>
+      <button class="btn primary" id="newProductBtn">+ Nova peça</button>
+    </div>
+    <div class="prod-grid" id="prodGrid">
+      <div class="loading">Carregando produtos...</div>
+    </div>
+  </div>
+
+  <!-- ORDERS -->
+  <div class="panel" id="panel-orders">
+    <div class="panel-head"><h2>Pedidos</h2></div>
+    <div id="ordersList">
+      <div class="loading">Carregando pedidos...</div>
+    </div>
+  </div>
+</div>
+
+<!-- PRODUCT MODAL -->
+<div class="overlay" id="prodOverlay">
+  <div class="modal">
+    <h3 id="modalTitle">Nova peça</h3>
+    <input type="hidden" id="editId">
+    <div class="field">
+      <label>Nome</label>
+      <input type="text" id="fName" placeholder="Vestido Essence">
+    </div>
+    <div class="field">
+      <label>Descrição curta</label>
+      <input type="text" id="fDesc" placeholder="Longo fluido, alças finas">
+    </div>
+    <div class="field">
+      <label>Categoria</label>
+      <select id="fCategory">
+        <option value="Vestidos">Vestidos</option>
+        <option value="Conjuntos">Conjuntos</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Foto</label>
+      <div class="photo-drop" id="photoDrop">
+        <span id="photoLabel">Clique para escolher uma foto</span>
+      </div>
+      <input type="file" id="fPhoto" accept="image/*" style="display:none;">
+    </div>
+    <div class="field">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <input type="checkbox" id="fActive" style="width:auto;" checked>
+        Peça ativa (visível na loja)
+      </label>
+    </div>
+    <div class="error-msg" id="modalError"></div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="cancelModalBtn" style="flex:1;">Cancelar</button>
+      <button class="btn primary" id="saveProductBtn" style="flex:1;">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ============ CONFIGURAÇÃO ============
+  const SUPABASE_URL = 'https://zpnnucqmloleumqjmyba.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_ZZ3_TAp5GHYzx13C16AAQw_iA9tLIZO';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let currentPhotoFile = null;
+  let products = [];
+
+  // ============ AUTH ============
+  async function checkSession(){
+    const { data } = await sb.auth.getSession();
+    if(data.session){
+      showApp();
+    } else {
+      showLogin();
+    }
+  }
+
+  function showLogin(){
+    document.getElementById('loginWrap').style.display = 'flex';
+    document.getElementById('app').classList.remove('show');
+  }
+  function showApp(){
+    document.getElementById('loginWrap').style.display = 'none';
+    document.getElementById('app').classList.add('show');
+    loadProducts();
+    loadOrders();
+  }
+
+  document.getElementById('showSignupBtn').addEventListener('click', function(){
+    document.getElementById('signupBox').style.display = 'block';
+    document.getElementById('signupToggleWrap').style.display = 'none';
+  });
+
+  document.getElementById('signupBtn').addEventListener('click', async function(){
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPass').value;
+    const msgEl = document.getElementById('signupMsg');
+    msgEl.style.display = 'none';
+    if(!email || !password || password.length < 6){
+      msgEl.textContent = 'Preencha e-mail e uma senha com pelo menos 6 caracteres nos campos acima.';
+      msgEl.style.display = 'block';
+      return;
+    }
+    const btn = this;
+    btn.disabled = true;
+    btn.textContent = 'Criando conta...';
+    const { data, error } = await sb.auth.signUp({ email, password });
+    btn.disabled = false;
+    btn.textContent = 'Criar conta com esse e-mail e senha';
+    if(error){
+      msgEl.textContent = 'Erro: ' + error.message;
+      msgEl.style.color = 'var(--danger)';
+      msgEl.style.display = 'block';
+      return;
+    }
+    if(data.session){
+      showApp();
+      return;
+    }
+    msgEl.style.color = 'var(--ok)';
+    msgEl.textContent = 'Conta criada! Se pedir confirmação, verifique o e-mail ' + email + ' e clique no link antes de entrar.';
+    msgEl.style.display = 'block';
+  });
+
+  document.getElementById('loginBtn').addEventListener('click', async function(){
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPass').value;
+    const errEl = document.getElementById('loginError');
+    errEl.style.display = 'none';
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if(error){
+      errEl.textContent = 'E-mail ou senha incorretos.';
+      errEl.style.display = 'block';
+      return;
+    }
+    showApp();
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', async function(){
+    await sb.auth.signOut();
+    showLogin();
+  });
+
+  // ============ TABS ============
+  document.querySelectorAll('.tab-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+      document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('show'); });
+      btn.classList.add('active');
+      document.getElementById('panel-' + btn.dataset.tab).classList.add('show');
+    });
+  });
+
+  // ============ PRODUCTS ============
+  function dressIconSvg(){
+    return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 2h6l1 3-1.2 1.4L17 20a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1l2.2-13.6L8 4l1-2Z"/></svg>';
+  }
+
+  async function loadProducts(){
+    const grid = document.getElementById('prodGrid');
+    const { data, error } = await sb.from('products').select('*').order('category').order('sort_order');
+    if(error){
+      grid.innerHTML = '<div class="empty-state">Erro ao carregar produtos: ' + error.message + '</div>';
+      return;
+    }
+    products = data || [];
+    if(products.length === 0){
+      grid.innerHTML = '<div class="empty-state">Nenhuma peça cadastrada ainda.</div>';
+      return;
+    }
+    grid.innerHTML = products.map(function(p){
+      return (
+        '<div class="prod-card">' +
+          '<div class="prod-photo">' +
+            (p.active ? '' : '<span class="badge-inactive">Inativa</span>') +
+            (p.image_url ? '<img src="'+p.image_url+'" alt="">' : dressIconSvg()) +
+          '</div>' +
+          '<div class="prod-body">' +
+            '<h3>'+p.name+'</h3>' +
+            '<div class="cat">'+p.category+' · '+(p.description||'')+'</div>' +
+            '<div class="prod-actions">' +
+              '<button class="btn ghost edit-btn" data-id="'+p.id+'">Editar</button>' +
+              '<button class="btn danger del-btn" data-id="'+p.id+'">Excluir</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+
+    grid.querySelectorAll('.edit-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){ openModal(btn.dataset.id); });
+    });
+    grid.querySelectorAll('.del-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){ deleteProduct(btn.dataset.id); });
+    });
+  }
+
+  function openModal(id){
+    currentPhotoFile = null;
+    document.getElementById('modalError').style.display = 'none';
+    document.getElementById('fPhoto').value = '';
+    if(id){
+      const p = products.find(function(x){ return x.id === id; });
+      document.getElementById('modalTitle').textContent = 'Editar peça';
+      document.getElementById('editId').value = p.id;
+      document.getElementById('fName').value = p.name;
+      document.getElementById('fDesc').value = p.description || '';
+      document.getElementById('fCategory').value = p.category;
+      document.getElementById('fActive').checked = p.active;
+      document.getElementById('photoLabel').textContent = p.image_url ? 'Foto atual (clique para trocar)' : 'Clique para escolher uma foto';
+      document.getElementById('photoDrop').innerHTML = (p.image_url ? '<img src="'+p.image_url+'">' : '') + '<span id="photoLabel">'+(p.image_url ? 'Foto atual (clique para trocar)' : 'Clique para escolher uma foto')+'</span>';
+    } else {
+      document.getElementById('modalTitle').textContent = 'Nova peça';
+      document.getElementById('editId').value = '';
+      document.getElementById('fName').value = '';
+      document.getElementById('fDesc').value = '';
+      document.getElementById('fCategory').value = 'Vestidos';
+      document.getElementById('fActive').checked = true;
+      document.getElementById('photoDrop').innerHTML = '<span id="photoLabel">Clique para escolher uma foto</span>';
+    }
+    document.getElementById('prodOverlay').classList.add('show');
+  }
+
+  document.getElementById('newProductBtn').addEventListener('click', function(){ openModal(null); });
+  document.getElementById('cancelModalBtn').addEventListener('click', function(){
+    document.getElementById('prodOverlay').classList.remove('show');
+  });
+  document.getElementById('photoDrop').addEventListener('click', function(){
+    document.getElementById('fPhoto').click();
+  });
+  document.getElementById('fPhoto').addEventListener('change', function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    currentPhotoFile = file;
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      document.getElementById('photoDrop').innerHTML = '<img src="'+ev.target.result+'"><span>'+file.name+'</span>';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  async function uploadPhoto(file){
+    const ext = file.name.split('.').pop();
+    const path = 'p-' + Date.now() + '-' + Math.random().toString(36).slice(2) + '.' + ext;
+    const { error } = await sb.storage.from('product-photos').upload(path, file);
+    if(error) throw error;
+    const { data } = sb.storage.from('product-photos').getPublicUrl(path);
+    return data.publicUrl;
+  }
+
+  document.getElementById('saveProductBtn').addEventListener('click', async function(){
+    const errEl = document.getElementById('modalError');
+    errEl.style.display = 'none';
+    const id = document.getElementById('editId').value;
+    const name = document.getElementById('fName').value.trim();
+    const description = document.getElementById('fDesc').value.trim();
+    const category = document.getElementById('fCategory').value;
+    const active = document.getElementById('fActive').checked;
+
+    if(!name){
+      errEl.textContent = 'Digite o nome da peça.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    const btn = this;
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+
+    try {
+      let image_url = undefined;
+      if(currentPhotoFile){
+        image_url = await uploadPhoto(currentPhotoFile);
+      }
+      const payload = { name, description, category, active };
+      if(image_url) payload.image_url = image_url;
+
+      if(id){
+        const { error } = await sb.from('products').update(payload).eq('id', id);
+        if(error) throw error;
+      } else {
+        const { error } = await sb.from('products').insert(payload);
+        if(error) throw error;
+      }
+      document.getElementById('prodOverlay').classList.remove('show');
+      await loadProducts();
+    } catch(err){
+      errEl.textContent = 'Erro ao salvar: ' + err.message;
+      errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Salvar';
+    }
+  });
+
+  async function deleteProduct(id){
+    if(!confirm('Tem certeza que quer excluir essa peça? Essa ação não pode ser desfeita.')) return;
+    const { error } = await sb.from('products').delete().eq('id', id);
+    if(error){ alert('Erro ao excluir: ' + error.message); return; }
+    loadProducts();
+  }
+
+  // ============ ORDERS ============
+  function money(v){ return 'R$ ' + Number(v).toFixed(2).replace('.', ','); }
+
+  async function loadOrders(){
+    const list = document.getElementById('ordersList');
+    const { data, error } = await sb
+      .from('orders')
+      .select('*, customers(name, phone, address)')
+      .order('created_at', { ascending: false });
+    if(error){
+      list.innerHTML = '<div class="empty-state">Erro ao carregar pedidos: ' + error.message + '</div>';
+      return;
+    }
+    if(!data || data.length === 0){
+      list.innerHTML = '<div class="empty-state">Nenhum pedido registrado ainda.</div>';
+      return;
+    }
+    list.innerHTML = data.map(function(o){
+      const cli = o.customers || {};
+      const date = new Date(o.created_at).toLocaleString('pt-BR');
+      const itemsHtml = (o.items || []).map(function(it){
+        return '<div>• '+it.name+' (tam. '+it.size+') x'+it.qty+'</div>';
+      }).join('');
+      return (
+        '<div class="order-card">' +
+          '<div class="order-head">' +
+            '<span class="cli">'+(cli.name || 'Cliente')+'</span>' +
+            '<span class="date">'+date+'</span>' +
+          '</div>' +
+          '<div class="order-meta">'+(cli.phone||'')+' · '+(cli.address||'')+'</div>' +
+          '<div class="order-items">'+itemsHtml+'</div>' +
+          '<div class="order-total">'+o.total_pieces+' peças · '+money(o.total)+'</div>' +
+          '<select class="status-select" data-id="'+o.id+'">' +
+            ['novo','confirmado','enviado','concluído'].map(function(s){
+              return '<option value="'+s+'"'+(o.status===s?' selected':'')+'>'+s+'</option>';
+            }).join('') +
+          '</select>' +
+        '</div>'
+      );
+    }).join('');
+
+    list.querySelectorAll('.status-select').forEach(function(sel){
+      sel.addEventListener('change', async function(){
+        await sb.from('orders').update({ status: sel.value }).eq('id', sel.dataset.id);
+      });
+    });
+  }
+
+  checkSession();
+</script>
+</body>
+</html>
